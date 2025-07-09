@@ -200,10 +200,10 @@ class SimpleDemoOrchestrator:
     async def _run_scenario_rotation(self):
         """Run different demo scenarios in rotation"""
         scenarios = [
-            (DemoScenario.BASELINE_TRAINING, 30),
-            (DemoScenario.DYNAMIC_SCALING, 20),
-            (DemoScenario.WORKER_FAILURE, 25),
-            (DemoScenario.GRADIENT_STRATEGIES, 15)
+            (DemoScenario.BASELINE_TRAINING, 45),  # More time to show loss convergence
+            (DemoScenario.DYNAMIC_SCALING, 25),
+            (DemoScenario.WORKER_FAILURE, 20),
+            (DemoScenario.GRADIENT_STRATEGIES, 20)
         ]
         
         while self.running:
@@ -231,14 +231,38 @@ class SimpleDemoOrchestrator:
     
     async def _baseline_training_scenario(self):
         """Simulate normal training progress"""
-        # Gradual loss improvement
+        # More aggressive loss improvement for better demo visualization
         current_loss = self.demo_state["training_progress"]["loss"]
-        new_loss = max(0.1, current_loss - random.uniform(0.005, 0.02))
+        
+        # Start with faster initial convergence, then slow down
+        if current_loss > 0.5:
+            # Fast initial convergence
+            loss_reduction = random.uniform(0.03, 0.08)
+        elif current_loss > 0.2:
+            # Moderate convergence
+            loss_reduction = random.uniform(0.01, 0.04)
+        else:
+            # Slow final convergence
+            loss_reduction = random.uniform(0.002, 0.01)
+        
+        new_loss = max(0.05, current_loss - loss_reduction)
         self.demo_state["training_progress"]["loss"] = new_loss
         
-        # Gradual accuracy improvement
+        # Corresponding accuracy improvement
         current_accuracy = self.demo_state["training_progress"]["accuracy"]
-        new_accuracy = min(0.95, current_accuracy + random.uniform(0.005, 0.02))
+        
+        # Accuracy follows inverse relationship with loss
+        if current_accuracy < 0.5:
+            # Fast initial accuracy gains
+            accuracy_gain = random.uniform(0.02, 0.06)
+        elif current_accuracy < 0.8:
+            # Moderate accuracy gains
+            accuracy_gain = random.uniform(0.01, 0.03)
+        else:
+            # Slow final accuracy gains
+            accuracy_gain = random.uniform(0.001, 0.01)
+        
+        new_accuracy = min(0.98, current_accuracy + accuracy_gain)
         self.demo_state["training_progress"]["accuracy"] = new_accuracy
         
         # Update training state in performance monitor
@@ -267,12 +291,20 @@ class SimpleDemoOrchestrator:
         })
         logger.info(f"🔄 Added worker: {new_worker_id}")
         
+        # Simulate slight throughput improvement with more workers
+        current_throughput = self.demo_state["training_progress"]["throughput"]
+        self.demo_state["training_progress"]["throughput"] = current_throughput + random.uniform(20, 40)
+        
         await asyncio.sleep(10)
         
         # Remove worker
         if len(self.demo_state["active_workers"]) > 1:
             removed_worker = self.demo_state["active_workers"].pop()
             logger.info(f"🔄 Removed worker: {removed_worker['id']}")
+            
+            # Throughput decreases when worker is removed
+            current_throughput = self.demo_state["training_progress"]["throughput"]
+            self.demo_state["training_progress"]["throughput"] = max(150, current_throughput - random.uniform(20, 40))
     
     async def _worker_failure_scenario(self):
         """Simulate worker failure and recovery"""
@@ -289,11 +321,18 @@ class SimpleDemoOrchestrator:
                 "timestamp": time.time()
             })
             
+            # Simulate impact on training - temporary loss increase
+            current_loss = self.demo_state["training_progress"]["loss"]
+            self.demo_state["training_progress"]["loss"] = min(1.0, current_loss + random.uniform(0.05, 0.15))
+            
             await asyncio.sleep(5)
             
             # Recover worker
             worker["status"] = "active"
             logger.info(f"🔧 Worker {worker['id']} recovered")
+            
+            # Training gradually returns to normal
+            await asyncio.sleep(2)
     
     async def _gradient_strategies_scenario(self):
         """Simulate switching gradient strategies"""
