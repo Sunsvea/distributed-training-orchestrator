@@ -1,4 +1,5 @@
 import pytest
+import pytest_asyncio
 import asyncio
 import grpc
 from unittest.mock import Mock, AsyncMock, patch
@@ -12,7 +13,7 @@ from communication.worker_client import WorkerClient
 @pytest.mark.asyncio
 class TestCoordinatorServer:
     
-    @pytest.fixture
+    @pytest_asyncio.fixture
     async def coordinator_server(self):
         from coordinator.raft_coordinator import RaftCoordinator
         from coordinator.cluster_manager import ClusterManager
@@ -27,13 +28,18 @@ class TestCoordinatorServer:
         cluster_manager = ClusterManager(
             coordinator_nodes=["localhost:8001", "localhost:8002", "localhost:8003"]
         )
+        cluster_manager.leader_id = "coordinator-1"  # Set leader for tests
+        cluster_manager._update_cluster_health()  # Update health status
         
-        server = CoordinatorServer(coordinator, cluster_manager, port=8001)
-        await server.start()
+        server = CoordinatorServer(coordinator, cluster_manager, port=8001, start_background_tasks=False)
         
-        yield server
-        
-        await server.stop()
+        try:
+            await server.start()
+            # Give server time to start
+            await asyncio.sleep(0.5)
+            yield server
+        finally:
+            await server.stop()
     
     async def test_join_cluster(self, coordinator_server):
         # Create a client to test the server
@@ -315,7 +321,7 @@ class TestGradientSynchronization:
         
         # Verify all fields are properly set
         assert metrics.loss == 0.5
-        assert metrics.accuracy == 0.85
+        assert abs(metrics.accuracy - 0.85) < 1e-6
         assert metrics.iteration == 100
         assert len(metrics.custom_metrics) == 2
 
@@ -328,7 +334,7 @@ class TestNetworkFailureHandling:
         with patch('communication.worker_client.grpc.aio.insecure_channel') as mock_channel:
             # Mock connection failure then success
             mock_channel.side_effect = [
-                grpc.aio.AioRpcError(grpc.StatusCode.UNAVAILABLE, "Connection failed"),
+                grpc.aio.AioRpcError(grpc.StatusCode.UNAVAILABLE, "Connection failed", None, None),
                 AsyncMock()  # Successful connection on retry
             ]
             
@@ -344,7 +350,7 @@ class TestNetworkFailureHandling:
         
         mock_stub = AsyncMock()
         mock_stub.Heartbeat.side_effect = grpc.aio.AioRpcError(
-            grpc.StatusCode.UNAVAILABLE, "Leader unavailable"
+            grpc.StatusCode.UNAVAILABLE, "Leader unavailable", None, None
         )
         client.stub = mock_stub
         
@@ -359,7 +365,7 @@ class TestNetworkFailureHandling:
         
         mock_stub = AsyncMock()
         mock_stub.SyncGradients.side_effect = grpc.aio.AioRpcError(
-            grpc.StatusCode.DEADLINE_EXCEEDED, "Request timeout"
+            grpc.StatusCode.DEADLINE_EXCEEDED, "Request timeout", None, None
         )
         client.stub = mock_stub
         

@@ -427,12 +427,14 @@ class CoordinatorService(ClusterServiceServicer):
             )
 
 class CoordinatorServer:
-    def __init__(self, coordinator: RaftCoordinator, cluster_manager: ClusterManager, port: int):
+    def __init__(self, coordinator: RaftCoordinator, cluster_manager: ClusterManager, port: int, start_background_tasks: bool = True):
         self.coordinator = coordinator
         self.cluster_manager = cluster_manager
         self.port = port
+        self.start_background_tasks = start_background_tasks
         self.server: Optional[grpc.aio.Server] = None
         self.service = CoordinatorService(coordinator, cluster_manager)
+        self.background_tasks = []
     
     async def start(self):
         self.server = grpc.aio.server(futures.ThreadPoolExecutor(max_workers=10))
@@ -444,12 +446,26 @@ class CoordinatorServer:
         logger.info(f"Starting coordinator server on {listen_addr}")
         await self.server.start()
         
-        # Start background tasks
-        asyncio.create_task(self._election_timeout_task())
-        asyncio.create_task(self._heartbeat_task())
-        asyncio.create_task(self._failure_detection_task())
+        # Start background tasks if enabled
+        if self.start_background_tasks:
+            try:
+                self.background_tasks = [
+                    asyncio.create_task(self._election_timeout_task()),
+                    asyncio.create_task(self._heartbeat_task()),
+                    asyncio.create_task(self._failure_detection_task())
+                ]
+            except Exception as e:
+                logger.error(f"Error starting background tasks: {e}")
     
     async def stop(self):
+        # Cancel background tasks
+        for task in self.background_tasks:
+            task.cancel()
+        
+        # Wait for tasks to finish
+        if self.background_tasks:
+            await asyncio.gather(*self.background_tasks, return_exceptions=True)
+        
         if self.server:
             logger.info("Stopping coordinator server")
             await self.server.stop(grace=5)
