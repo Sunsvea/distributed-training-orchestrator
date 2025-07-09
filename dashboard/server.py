@@ -802,17 +802,10 @@ class DashboardServer:
         
         
         /* Training Progress */
-        .training-controls-container {
-            display: flex;
-            gap: 2rem;
-            align-items: flex-start;
-        }
-        
         .training-progress {
             display: flex;
             flex-direction: column;
             gap: 1rem;
-            flex: 1;
         }
         
         .progress-item {
@@ -833,12 +826,11 @@ class DashboardServer:
             padding: 0.5rem;
         }
         
-        /* Demo Controls - adjusted for side-by-side layout */
+        /* Demo Controls - standalone card */
         .demo-controls {
             display: flex;
             flex-direction: column;
             gap: 1rem;
-            flex: 0 0 280px; /* Fixed width for controls */
         }
         
         .control-group {
@@ -976,41 +968,44 @@ class DashboardServer:
             </div>
         </div>
         
-        <!-- Training Progress with Demo Controls -->
+        <!-- Training Progress -->
         <div class="card">
-            <h3>Training Progress & Demo Controls</h3>
-            <div class="training-controls-container">
-                <div class="training-progress">
-                    <div class="progress-item">
-                        <label>Loss Curve:</label>
-                        <div class="mini-chart">
-                            <canvas id="lossChart"></canvas>
-                        </div>
-                    </div>
-                    <div class="progress-item">
-                        <label>Accuracy Curve:</label>
-                        <div class="mini-chart">
-                            <canvas id="accuracyChart"></canvas>
-                        </div>
+            <h3>Training Progress</h3>
+            <div class="training-progress">
+                <div class="progress-item">
+                    <label>Loss Curve:</label>
+                    <div class="mini-chart">
+                        <canvas id="lossChart"></canvas>
                     </div>
                 </div>
-                <div class="demo-controls">
-                    <div class="control-group">
-                        <label>Current Scenario:</label>
-                        <div class="scenario-display" id="currentScenario">Baseline Training</div>
+                <div class="progress-item">
+                    <label>Accuracy Curve:</label>
+                    <div class="mini-chart">
+                        <canvas id="accuracyChart"></canvas>
                     </div>
-                    <div class="control-group">
-                        <label>Interactive Actions:</label>
-                        <button class="demo-btn" onclick="addWorker()">➕ Add Worker</button>
-                        <button class="demo-btn" onclick="removeWorker()">➖ Remove Worker</button>
-                        <button class="demo-btn" onclick="injectFailure()">💥 Inject Failure</button>
-                        <button class="demo-btn" onclick="switchStrategy()">🔄 Switch Strategy</button>
-                        <button class="demo-btn" onclick="resetTraining()">🔄 Reset Training</button>
-                    </div>
-                    <div class="control-group">
-                        <label>Gradient Strategy:</label>
-                        <div class="strategy-display" id="gradientStrategy">AllReduce</div>
-                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Demo Controls -->
+        <div class="card">
+            <h3>Demo Controls</h3>
+            <div class="demo-controls">
+                <div class="control-group">
+                    <label>Current Scenario:</label>
+                    <div class="scenario-display" id="currentScenario">Baseline Training</div>
+                </div>
+                <div class="control-group">
+                    <label>Interactive Actions:</label>
+                    <button class="demo-btn" onclick="addWorker()">➕ Add Worker</button>
+                    <button class="demo-btn" onclick="removeWorker()">➖ Remove Worker</button>
+                    <button class="demo-btn" onclick="injectFailure()">💥 Inject Failure</button>
+                    <button class="demo-btn" onclick="switchStrategy()">🔄 Switch Strategy</button>
+                    <button class="demo-btn" onclick="resetTraining()">🔄 Reset Training</button>
+                </div>
+                <div class="control-group">
+                    <label>Gradient Strategy:</label>
+                    <div class="strategy-display" id="gradientStrategy">AllReduce</div>
                 </div>
             </div>
         </div>
