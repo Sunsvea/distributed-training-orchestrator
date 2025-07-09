@@ -233,12 +233,36 @@ class DashboardServer:
             try:
                 # Signal to demo orchestrator to inject failure
                 if hasattr(self, 'demo_orchestrator') and self.demo_orchestrator:
-                    if len(self.demo_orchestrator.demo_state['active_workers']) > 1:
-                        worker_id = self.demo_orchestrator.demo_state['active_workers'][0]['id']
-                        await self.demo_orchestrator._simulate_worker_failure(worker_id)
-                        return {"success": True, "worker_id": worker_id, "message": "Failure injected - observe recovery"}
+                    # Get active workers (not already failed)
+                    active_workers = [w for w in self.demo_orchestrator.demo_state['active_workers'] if w['status'] == 'active']
+                    
+                    if len(active_workers) >= 1:
+                        # Randomly select an active worker to fail
+                        import random
+                        worker = random.choice(active_workers)
+                        worker_id = worker['id']
+                        
+                        # Fail the worker immediately
+                        worker['status'] = 'failed'
+                        
+                        # Record fault injection
+                        self.demo_orchestrator.demo_state["fault_injections"].append({
+                            "type": "worker_failure",
+                            "target": worker_id,
+                            "timestamp": time.time()
+                        })
+                        
+                        # Simulate impact on training - temporary loss increase
+                        current_loss = self.demo_orchestrator.demo_state["training_progress"]["loss"]
+                        self.demo_orchestrator.demo_state["training_progress"]["loss"] = min(1.0, current_loss + random.uniform(0.05, 0.15))
+                        
+                        # Schedule recovery after 8-12 seconds
+                        recovery_delay = random.uniform(8, 12)
+                        asyncio.create_task(self._schedule_worker_recovery(worker_id, recovery_delay))
+                        
+                        return {"success": True, "worker_id": worker_id, "message": f"Worker {worker_id} failed - recovery in {recovery_delay:.1f}s"}
                     else:
-                        return {"success": False, "message": "Need at least 2 workers for failure injection"}
+                        return {"success": False, "message": "No active workers available to fail"}
                 else:
                     return {"success": False, "message": "Demo orchestrator not available"}
             except Exception as e:
@@ -301,6 +325,18 @@ class DashboardServer:
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
         logger.info(f"WebSocket disconnected. Active connections: {len(self.active_connections)}")
+    
+    async def _schedule_worker_recovery(self, worker_id: str, delay: float):
+        """Schedule automatic recovery of a failed worker"""
+        await asyncio.sleep(delay)
+        
+        # Find and recover the worker
+        if hasattr(self, 'demo_orchestrator') and self.demo_orchestrator:
+            for worker in self.demo_orchestrator.demo_state['active_workers']:
+                if worker['id'] == worker_id and worker['status'] == 'failed':
+                    worker['status'] = 'active'
+                    logger.info(f"🔧 Worker {worker_id} automatically recovered")
+                    break
     
     def _convert_metrics_to_json(self, metrics: Dict[str, Any]) -> Dict[str, Any]:
         """Convert metrics with dataclass objects to JSON-serializable format"""
