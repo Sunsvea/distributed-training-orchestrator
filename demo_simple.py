@@ -215,8 +215,11 @@ class SimpleDemoOrchestrator:
                 self.current_scenario = scenario
                 self.demo_state["current_scenario"] = scenario.value
                 
-                await self._execute_scenario(scenario)
-                await asyncio.sleep(duration)
+                # Execute scenario repeatedly during its duration
+                start_time = time.time()
+                while time.time() - start_time < duration and self.running:
+                    await self._execute_scenario(scenario)
+                    await asyncio.sleep(2)  # Update every 2 seconds
     
     async def _execute_scenario(self, scenario: DemoScenario):
         """Execute a specific demo scenario"""
@@ -282,23 +285,25 @@ class SimpleDemoOrchestrator:
     
     async def _dynamic_scaling_scenario(self):
         """Simulate adding/removing workers"""
-        # Add worker
-        new_worker_id = f"worker-{len(self.demo_state['active_workers']) + 1}"
-        self.demo_state["active_workers"].append({
-            "id": new_worker_id,
-            "status": "active",
-            "connected_at": time.time()
-        })
-        logger.info(f"🔄 Added worker: {new_worker_id}")
+        # Continue baseline training during scaling
+        await self._baseline_training_scenario()
         
-        # Simulate slight throughput improvement with more workers
-        current_throughput = self.demo_state["training_progress"]["throughput"]
-        self.demo_state["training_progress"]["throughput"] = current_throughput + random.uniform(20, 40)
+        # Add worker occasionally
+        if random.random() < 0.1 and len(self.demo_state['active_workers']) < 8:
+            new_worker_id = f"worker-{len(self.demo_state['active_workers']) + 1}"
+            self.demo_state["active_workers"].append({
+                "id": new_worker_id,
+                "status": "active",
+                "connected_at": time.time()
+            })
+            logger.info(f"🔄 Added worker: {new_worker_id}")
+            
+            # Simulate slight throughput improvement with more workers
+            current_throughput = self.demo_state["training_progress"]["throughput"]
+            self.demo_state["training_progress"]["throughput"] = current_throughput + random.uniform(20, 40)
         
-        await asyncio.sleep(10)
-        
-        # Remove worker
-        if len(self.demo_state["active_workers"]) > 1:
+        # Remove worker occasionally
+        elif random.random() < 0.1 and len(self.demo_state["active_workers"]) > 3:
             removed_worker = self.demo_state["active_workers"].pop()
             logger.info(f"🔄 Removed worker: {removed_worker['id']}")
             
@@ -308,43 +313,51 @@ class SimpleDemoOrchestrator:
     
     async def _worker_failure_scenario(self):
         """Simulate worker failure and recovery"""
-        if len(self.demo_state["active_workers"]) > 1:
-            # Fail a worker
-            worker = self.demo_state["active_workers"][0]
-            worker["status"] = "failed"
-            logger.info(f"💥 Worker {worker['id']} failed")
-            
-            # Record fault injection
-            self.demo_state["fault_injections"].append({
-                "type": "worker_failure",
-                "target": worker["id"],
-                "timestamp": time.time()
-            })
-            
-            # Simulate impact on training - temporary loss increase
-            current_loss = self.demo_state["training_progress"]["loss"]
-            self.demo_state["training_progress"]["loss"] = min(1.0, current_loss + random.uniform(0.05, 0.15))
-            
-            await asyncio.sleep(5)
-            
-            # Recover worker
-            worker["status"] = "active"
-            logger.info(f"🔧 Worker {worker['id']} recovered")
-            
-            # Training gradually returns to normal
-            await asyncio.sleep(2)
+        # Continue training progress
+        await self._baseline_training_scenario()
+        
+        # Occasionally inject failures
+        if random.random() < 0.05 and len(self.demo_state["active_workers"]) > 1:
+            # Find a worker to fail
+            active_workers = [w for w in self.demo_state["active_workers"] if w["status"] == "active"]
+            if active_workers:
+                worker = random.choice(active_workers)
+                worker["status"] = "failed"
+                logger.info(f"💥 Worker {worker['id']} failed")
+                
+                # Record fault injection
+                self.demo_state["fault_injections"].append({
+                    "type": "worker_failure",
+                    "target": worker["id"],
+                    "timestamp": time.time()
+                })
+                
+                # Simulate impact on training - temporary loss increase
+                current_loss = self.demo_state["training_progress"]["loss"]
+                self.demo_state["training_progress"]["loss"] = min(1.0, current_loss + random.uniform(0.05, 0.15))
+        
+        # Recover failed workers occasionally
+        elif random.random() < 0.1:
+            failed_workers = [w for w in self.demo_state["active_workers"] if w["status"] == "failed"]
+            if failed_workers:
+                worker = random.choice(failed_workers)
+                worker["status"] = "active"
+                logger.info(f"🔧 Worker {worker['id']} recovered")
     
     async def _gradient_strategies_scenario(self):
         """Simulate switching gradient strategies"""
-        # Switch to Parameter Server
-        logger.info("🔄 Switching to Parameter Server strategy")
-        self.demo_state["current_strategy"] = "ParameterServer"
+        # Continue training progress
+        await self._baseline_training_scenario()
         
-        await asyncio.sleep(10)
-        
-        # Switch back to AllReduce
-        logger.info("🔄 Switching back to AllReduce strategy")
-        self.demo_state["current_strategy"] = "AllReduce"
+        # Occasionally switch strategies
+        if random.random() < 0.1:
+            current_strategy = self.demo_state["current_strategy"]
+            if current_strategy == "AllReduce":
+                logger.info("🔄 Switching to Parameter Server strategy")
+                self.demo_state["current_strategy"] = "ParameterServer"
+            else:
+                logger.info("🔄 Switching back to AllReduce strategy")
+                self.demo_state["current_strategy"] = "AllReduce"
     
     async def _simulate_realistic_metrics(self):
         """Simulate realistic system metrics"""
