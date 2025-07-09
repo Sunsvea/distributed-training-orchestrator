@@ -19,6 +19,18 @@ A fault-tolerant distributed machine learning training system with consensus-bas
 
 ## Quick Start
 
+### Interactive Demo (Recommended for Demonstrations)
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Start the complete interactive demo
+python demo_orchestrator.py
+
+# Access dashboard at http://localhost:8080
+```
+
+### Manual Setup (Development)
 ```bash
 # Install dependencies
 pip install -r requirements.txt
@@ -31,7 +43,7 @@ python worker/main.py --node-id worker-1
 python worker/main.py --node-id worker-2
 python worker/main.py --node-id worker-3
 
-# Start real-time dashboard
+# Start dashboard only
 python demo_dashboard.py
 ```
 
@@ -40,19 +52,31 @@ python demo_dashboard.py
 The integrated web dashboard provides:
 
 - **Real-time Monitoring**: Live system metrics, training progress, and cluster health
-- **Interactive Charts**: Performance trends and resource utilization visualization
+- **Cluster Visualization**: Interactive topology showing coordinator and worker nodes
+- **Interactive Controls**: Add/remove workers, inject failures, switch strategies
+- **Performance Charts**: Live CPU/memory trends and training progress curves
 - **Smart Alerts**: Configurable alerting rules with multiple severity levels
 - **Performance Insights**: Automated recommendations and optimization suggestions
 - **WebSocket Updates**: Real-time data streaming for live dashboard updates
 - **REST API**: Programmatic access to all metrics and cluster information
 - **Export Capabilities**: Download metrics in JSON/CSV formats for analysis
 
-Access the dashboard at `http://localhost:8080` after starting with `python demo_dashboard.py`.
+Access the dashboard at `http://localhost:8080` after starting the demo.
 
-## Demo Scenarios
+## Interactive Demo Scenarios
 
-1. **Baseline Training**: 3 nodes collaboratively training
-2. **Dynamic Scaling**: Add/remove nodes during training
-3. **Fault Injection**: Coordinator failure and recovery
-4. **Network Partition**: Split-brain detection and healing
-5. **Performance Analysis**: Scaling efficiency metrics
+The demo automatically cycles through different scenarios to showcase the system's capabilities:
+
+1. **Baseline Training**: Normal distributed training across multiple workers
+2. **Dynamic Scaling**: Add/remove workers during training with live cluster updates
+3. **Fault Injection**: Worker failure simulation with automatic recovery
+4. **Gradient Strategies**: Switch between AllReduce and Parameter Server algorithms
+5. **Performance Analysis**: Real-time metrics and alerting demonstrations
+
+### Interactive Controls
+- **➕ Add Worker**: Dynamically scale up the cluster
+- **➖ Remove Worker**: Scale down the cluster  
+- **💥 Inject Failure**: Simulate worker failure to demonstrate recovery
+- **🔄 Switch Strategy**: Change gradient synchronization method
+
+See [DEMO_GUIDE.md](DEMO_GUIDE.md) for detailed demonstration instructions.

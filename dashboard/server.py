@@ -193,6 +193,77 @@ class DashboardServer:
                 logger.error(f"Error exporting metrics: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
         
+        # Demo control endpoints
+        @self.app.post("/api/demo/add-worker")
+        async def add_demo_worker():
+            """Add a worker to the demo cluster"""
+            try:
+                # Signal to demo orchestrator to add worker
+                if hasattr(self, 'demo_orchestrator') and self.demo_orchestrator:
+                    worker_id = f"worker-{len(self.demo_orchestrator.workers) + 1}"
+                    await self.demo_orchestrator._start_worker(worker_id)
+                    return {"success": True, "worker_id": worker_id, "message": "Worker added successfully"}
+                else:
+                    return {"success": False, "message": "Demo orchestrator not available"}
+            except Exception as e:
+                logger.error(f"Error adding demo worker: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
+        @self.app.post("/api/demo/remove-worker")
+        async def remove_demo_worker():
+            """Remove a worker from the demo cluster"""
+            try:
+                # Signal to demo orchestrator to remove worker
+                if hasattr(self, 'demo_orchestrator') and self.demo_orchestrator:
+                    if len(self.demo_orchestrator.workers) > 1:
+                        worker_id = list(self.demo_orchestrator.workers.keys())[-1]
+                        await self.demo_orchestrator._stop_worker(worker_id)
+                        return {"success": True, "worker_id": worker_id, "message": "Worker removed successfully"}
+                    else:
+                        return {"success": False, "message": "Cannot remove last worker"}
+                else:
+                    return {"success": False, "message": "Demo orchestrator not available"}
+            except Exception as e:
+                logger.error(f"Error removing demo worker: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
+        @self.app.post("/api/demo/inject-failure")
+        async def inject_demo_failure():
+            """Inject a failure into the demo cluster"""
+            try:
+                # Signal to demo orchestrator to inject failure
+                if hasattr(self, 'demo_orchestrator') and self.demo_orchestrator:
+                    if len(self.demo_orchestrator.workers) > 1:
+                        worker_id = list(self.demo_orchestrator.workers.keys())[0]
+                        await self.demo_orchestrator._simulate_worker_failure(worker_id)
+                        return {"success": True, "worker_id": worker_id, "message": "Failure injected - observe recovery"}
+                    else:
+                        return {"success": False, "message": "Need at least 2 workers for failure injection"}
+                else:
+                    return {"success": False, "message": "Demo orchestrator not available"}
+            except Exception as e:
+                logger.error(f"Error injecting demo failure: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
+        @self.app.post("/api/demo/switch-strategy")
+        async def switch_demo_strategy():
+            """Switch gradient synchronization strategy"""
+            try:
+                # Signal to demo orchestrator to switch strategy
+                if hasattr(self, 'demo_orchestrator') and self.demo_orchestrator:
+                    current_strategy = getattr(self.demo_orchestrator, 'current_strategy', 'AllReduce')
+                    new_strategy = 'ParameterServer' if current_strategy == 'AllReduce' else 'AllReduce'
+                    
+                    # Switch strategy logic would go here
+                    self.demo_orchestrator.current_strategy = new_strategy
+                    
+                    return {"success": True, "new_strategy": new_strategy, "message": f"Switched to {new_strategy} strategy"}
+                else:
+                    return {"success": False, "message": "Demo orchestrator not available"}
+            except Exception as e:
+                logger.error(f"Error switching demo strategy: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
         @self.app.websocket("/ws")
         async def websocket_endpoint(websocket: WebSocket):
             """WebSocket endpoint for real-time updates"""
@@ -532,6 +603,152 @@ class DashboardServer:
         .full-width {
             grid-column: 1 / -1;
         }
+        
+        /* Cluster Visualization */
+        .cluster-viz-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .cluster-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+            margin: 0.5rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease;
+        }
+        
+        .cluster-node:hover {
+            transform: translateY(-2px);
+        }
+        
+        .cluster-node.coordinator {
+            border: 2px solid #667eea;
+        }
+        
+        .cluster-node.worker {
+            border: 2px solid #4CAF50;
+        }
+        
+        .cluster-node.failed {
+            border: 2px solid #f44336;
+            opacity: 0.7;
+        }
+        
+        .node-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .node-label {
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+        }
+        
+        .node-status {
+            font-size: 0.8rem;
+            color: #666;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            background: #e9ecef;
+        }
+        
+        .node-status.active {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .node-status.failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .workers-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+        
+        /* Demo Controls */
+        .demo-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .control-group label {
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: #333;
+        }
+        
+        .scenario-display, .strategy-display {
+            padding: 0.5rem;
+            background: #e9ecef;
+            border-radius: 4px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .demo-btn {
+            padding: 0.5rem 1rem;
+            margin: 0.25rem;
+            border: none;
+            border-radius: 4px;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.2s ease;
+        }
+        
+        .demo-btn:hover {
+            background: #5a6fd8;
+        }
+        
+        .demo-btn:active {
+            transform: translateY(1px);
+        }
+        
+        /* Training Progress */
+        .training-progress {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .progress-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .progress-item label {
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .mini-chart {
+            height: 100px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            padding: 0.5rem;
+        }
     </style>
 </head>
 <body>
@@ -605,11 +822,67 @@ class DashboardServer:
             </div>
         </div>
         
+        <!-- Cluster Visualization -->
+        <div class="card full-width">
+            <h3>Cluster Topology</h3>
+            <div class="cluster-viz-container">
+                <div class="cluster-node coordinator" id="coordinatorNode">
+                    <div class="node-icon">🎯</div>
+                    <div class="node-label">Coordinator</div>
+                    <div class="node-status">Active</div>
+                </div>
+                <div class="workers-container" id="workersContainer">
+                    <!-- Worker nodes will be added dynamically -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Demo Controls -->
+        <div class="card">
+            <h3>Demo Controls</h3>
+            <div class="demo-controls">
+                <div class="control-group">
+                    <label>Current Scenario:</label>
+                    <div class="scenario-display" id="currentScenario">Baseline Training</div>
+                </div>
+                <div class="control-group">
+                    <label>Interactive Actions:</label>
+                    <button class="demo-btn" onclick="addWorker()">➕ Add Worker</button>
+                    <button class="demo-btn" onclick="removeWorker()">➖ Remove Worker</button>
+                    <button class="demo-btn" onclick="injectFailure()">💥 Inject Failure</button>
+                    <button class="demo-btn" onclick="switchStrategy()">🔄 Switch Strategy</button>
+                </div>
+                <div class="control-group">
+                    <label>Gradient Strategy:</label>
+                    <div class="strategy-display" id="gradientStrategy">AllReduce</div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Performance Charts -->
         <div class="card full-width">
             <h3>Performance Trends</h3>
             <div class="chart-container">
                 <canvas id="performanceChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Training Progress -->
+        <div class="card">
+            <h3>Training Progress</h3>
+            <div class="training-progress">
+                <div class="progress-item">
+                    <label>Loss Curve:</label>
+                    <div class="mini-chart">
+                        <canvas id="lossChart"></canvas>
+                    </div>
+                </div>
+                <div class="progress-item">
+                    <label>Accuracy Curve:</label>
+                    <div class="mini-chart">
+                        <canvas id="accuracyChart"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -893,6 +1166,241 @@ class DashboardServer:
                 return `${hours}h ${minutes}m`;
             } else {
                 return `${minutes}m`;
+            }
+        }
+        
+        // Demo control functions
+        function addWorker() {
+            console.log('Adding worker...');
+            // Send request to add worker
+            fetch('/api/demo/add-worker', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Worker added:', data);
+                    updateStatusMessage('Worker added successfully');
+                })
+                .catch(error => {
+                    console.error('Error adding worker:', error);
+                    updateStatusMessage('Error adding worker', 'error');
+                });
+        }
+        
+        function removeWorker() {
+            console.log('Removing worker...');
+            // Send request to remove worker
+            fetch('/api/demo/remove-worker', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Worker removed:', data);
+                    updateStatusMessage('Worker removed successfully');
+                })
+                .catch(error => {
+                    console.error('Error removing worker:', error);
+                    updateStatusMessage('Error removing worker', 'error');
+                });
+        }
+        
+        function injectFailure() {
+            console.log('Injecting failure...');
+            // Send request to inject failure
+            fetch('/api/demo/inject-failure', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Failure injected:', data);
+                    updateStatusMessage('Failure injected - observe recovery');
+                })
+                .catch(error => {
+                    console.error('Error injecting failure:', error);
+                    updateStatusMessage('Error injecting failure', 'error');
+                });
+        }
+        
+        function switchStrategy() {
+            console.log('Switching strategy...');
+            // Send request to switch gradient strategy
+            fetch('/api/demo/switch-strategy', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Strategy switched:', data);
+                    updateStatusMessage('Gradient strategy switched');
+                    document.getElementById('gradientStrategy').textContent = data.new_strategy;
+                })
+                .catch(error => {
+                    console.error('Error switching strategy:', error);
+                    updateStatusMessage('Error switching strategy', 'error');
+                });
+        }
+        
+        function updateStatusMessage(message, type = 'info') {
+            // Create status message element
+            const statusMsg = document.createElement('div');
+            statusMsg.className = `status-message ${type}`;
+            statusMsg.textContent = message;
+            statusMsg.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 10px 20px;
+                border-radius: 4px;
+                color: white;
+                background: ${type === 'error' ? '#f44336' : '#4CAF50'};
+                z-index: 1000;
+                animation: slideIn 0.3s ease;
+            `;
+            
+            document.body.appendChild(statusMsg);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                statusMsg.remove();
+            }, 3000);
+        }
+        
+        // Update cluster visualization
+        function updateClusterViz(clusterData) {
+            const workersContainer = document.getElementById('workersContainer');
+            workersContainer.innerHTML = '';
+            
+            if (clusterData && clusterData.workers) {
+                clusterData.workers.forEach(worker => {
+                    const workerNode = document.createElement('div');
+                    workerNode.className = `cluster-node worker ${worker.status === 'failed' ? 'failed' : ''}`;
+                    workerNode.innerHTML = `
+                        <div class="node-icon">${worker.status === 'failed' ? '❌' : '⚙️'}</div>
+                        <div class="node-label">${worker.id}</div>
+                        <div class="node-status ${worker.status === 'active' ? 'active' : 'failed'}">${worker.status}</div>
+                    `;
+                    workersContainer.appendChild(workerNode);
+                });
+            }
+        }
+        
+        // Update scenario display
+        function updateScenario(scenario) {
+            const scenarioDisplay = document.getElementById('currentScenario');
+            if (scenarioDisplay) {
+                scenarioDisplay.textContent = scenario.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+            }
+        }
+        
+        // Initialize mini charts for training progress
+        let lossChart = null;
+        let accuracyChart = null;
+        
+        function initMiniCharts() {
+            // Loss chart
+            const lossCtx = document.getElementById('lossChart').getContext('2d');
+            lossChart = new Chart(lossCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Loss',
+                        data: [],
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    animation: { duration: 0 }
+                }
+            });
+            
+            // Accuracy chart
+            const accuracyCtx = document.getElementById('accuracyChart').getContext('2d');
+            accuracyChart = new Chart(accuracyCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Accuracy',
+                        data: [],
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 100 }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    animation: { duration: 0 }
+                }
+            });
+        }
+        
+        function updateMiniCharts(metrics) {
+            if (!metrics.training) return;
+            
+            const now = new Date().toLocaleTimeString();
+            
+            // Update loss chart
+            if (lossChart) {
+                lossChart.data.labels.push(now);
+                lossChart.data.datasets[0].data.push(metrics.training.loss || 0);
+                
+                if (lossChart.data.labels.length > 10) {
+                    lossChart.data.labels.shift();
+                    lossChart.data.datasets[0].data.shift();
+                }
+                
+                lossChart.update('none');
+            }
+            
+            // Update accuracy chart
+            if (accuracyChart) {
+                accuracyChart.data.labels.push(now);
+                accuracyChart.data.datasets[0].data.push((metrics.training.accuracy * 100) || 0);
+                
+                if (accuracyChart.data.labels.length > 10) {
+                    accuracyChart.data.labels.shift();
+                    accuracyChart.data.datasets[0].data.shift();
+                }
+                
+                accuracyChart.update('none');
+            }
+        }
+        
+        // Override the initDashboard function to include new features
+        function initDashboard() {
+            initChart();
+            initMiniCharts();
+            connectWebSocket();
+            loadInitialData();
+        }
+        
+        // Override handleWebSocketMessage to handle new demo data
+        function handleWebSocketMessage(data) {
+            if (data.type === 'metrics_update') {
+                updateMetrics(data.metrics);
+                updateHealthScore(data.health_score);
+                updateAlerts(data.alerts);
+                updateChart(data.metrics);
+                updateMiniCharts(data.metrics);
+                
+                // Update cluster visualization if available
+                if (data.cluster) {
+                    updateClusterViz(data.cluster);
+                }
+                
+                // Update scenario if available
+                if (data.scenario) {
+                    updateScenario(data.scenario);
+                }
             }
         }
         
