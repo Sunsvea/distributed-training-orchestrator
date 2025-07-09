@@ -800,11 +800,45 @@ class DashboardServer:
             margin-top: 1rem;
         }
         
-        /* Demo Controls */
+        
+        /* Training Progress */
+        .training-controls-container {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-start;
+        }
+        
+        .training-progress {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            flex: 1;
+        }
+        
+        .progress-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .progress-item label {
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .mini-chart {
+            height: 100px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            padding: 0.5rem;
+        }
+        
+        /* Demo Controls - adjusted for side-by-side layout */
         .demo-controls {
             display: flex;
             flex-direction: column;
             gap: 1rem;
+            flex: 0 0 280px; /* Fixed width for controls */
         }
         
         .control-group {
@@ -845,46 +879,6 @@ class DashboardServer:
         
         .demo-btn:active {
             transform: translateY(1px);
-        }
-        
-        /* Training Progress */
-        .training-controls-container {
-            display: flex;
-            gap: 2rem;
-            align-items: flex-start;
-        }
-        
-        .training-progress {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            flex: 1;
-        }
-        
-        .progress-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-        
-        .progress-item label {
-            font-weight: bold;
-            font-size: 0.9rem;
-        }
-        
-        .mini-chart {
-            height: 100px;
-            background: #f8f9fa;
-            border-radius: 4px;
-            padding: 0.5rem;
-        }
-        
-        /* Demo Controls - adjusted for side-by-side layout */
-        .demo-controls {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            flex: 0 0 280px; /* Fixed width for controls */
         }
     </style>
 </head>
