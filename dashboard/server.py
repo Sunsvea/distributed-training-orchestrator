@@ -726,6 +726,10 @@ class DashboardServer:
             grid-column: 1 / -1;
         }
         
+        .cluster-with-controls {
+            grid-column: span 2; /* Takes up 2 columns to give more space for cluster visualization */
+        }
+        
         /* Cluster Visualization */
         .cluster-viz-container {
             display: flex;
@@ -945,8 +949,8 @@ class DashboardServer:
             </div>
         </div>
         
-        <!-- Cluster Visualization -->
-        <div class="card">
+        <!-- Cluster Visualization with Demo Controls -->
+        <div class="card cluster-with-controls">
             <h3>Cluster Topology</h3>
             <div class="cluster-viz-container">
                 <div class="cluster-node coordinator" id="coordinatorNode">
