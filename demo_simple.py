@@ -314,10 +314,13 @@ class SimpleDemoOrchestrator:
             active_workers = [w for w in self.demo_state["active_workers"] if w["status"] == "active"]
             worker_connections = [
                 {
-                    "node_id": worker["id"],
+                    "worker_id": worker["id"],
                     "status": worker["status"],
                     "connection_time": worker["connected_at"],
-                    "last_seen": time.time()
+                    "last_seen": time.time(),
+                    "latency": 1.0 + random.uniform(-0.5, 2.0),
+                    "bandwidth": 100.0 + random.uniform(-20, 50),
+                    "packet_loss": random.uniform(0, 0.05)
                 }
                 for worker in active_workers
             ]
