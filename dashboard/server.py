@@ -595,7 +595,7 @@ class DashboardServer:
         .dashboard {
             padding: 2rem;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: 2rem;
             max-width: 1400px;
             margin: 0 auto;
@@ -727,7 +727,7 @@ class DashboardServer:
         }
         
         .cluster-with-controls {
-            grid-column: span 2; /* Takes up 2 columns to give more space for cluster visualization */
+            grid-column: span 3; /* Takes up 3 columns, leaving 1 for demo controls */
         }
         
         /* Cluster Visualization */
