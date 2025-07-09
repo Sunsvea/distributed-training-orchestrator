@@ -945,6 +945,29 @@ class DashboardServer:
             </div>
         </div>
         
+        <!-- Demo Controls -->
+        <div class="card">
+            <h3>Demo Controls</h3>
+            <div class="demo-controls">
+                <div class="control-group">
+                    <label>Current Scenario:</label>
+                    <div class="scenario-display" id="currentScenario">Baseline Training</div>
+                </div>
+                <div class="control-group">
+                    <label>Interactive Actions:</label>
+                    <button class="demo-btn" onclick="addWorker()">➕ Add Worker</button>
+                    <button class="demo-btn" onclick="removeWorker()">➖ Remove Worker</button>
+                    <button class="demo-btn" onclick="injectFailure()">💥 Inject Failure</button>
+                    <button class="demo-btn" onclick="switchStrategy()">🔄 Switch Strategy</button>
+                    <button class="demo-btn" onclick="resetTraining()">🔄 Reset Training</button>
+                </div>
+                <div class="control-group">
+                    <label>Gradient Strategy:</label>
+                    <div class="strategy-display" id="gradientStrategy">AllReduce</div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Cluster Visualization -->
         <div class="card full-width">
             <h3>Cluster Topology</h3>
@@ -968,7 +991,7 @@ class DashboardServer:
             </div>
         </div>
         
-        <!-- Training Progress -->
+        <!-- Training Progress Charts -->
         <div class="card">
             <h3>Training Progress</h3>
             <div class="training-progress">
@@ -983,29 +1006,6 @@ class DashboardServer:
                     <div class="mini-chart">
                         <canvas id="accuracyChart"></canvas>
                     </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Demo Controls -->
-        <div class="card">
-            <h3>Demo Controls</h3>
-            <div class="demo-controls">
-                <div class="control-group">
-                    <label>Current Scenario:</label>
-                    <div class="scenario-display" id="currentScenario">Baseline Training</div>
-                </div>
-                <div class="control-group">
-                    <label>Interactive Actions:</label>
-                    <button class="demo-btn" onclick="addWorker()">➕ Add Worker</button>
-                    <button class="demo-btn" onclick="removeWorker()">➖ Remove Worker</button>
-                    <button class="demo-btn" onclick="injectFailure()">💥 Inject Failure</button>
-                    <button class="demo-btn" onclick="switchStrategy()">🔄 Switch Strategy</button>
-                    <button class="demo-btn" onclick="resetTraining()">🔄 Reset Training</button>
-                </div>
-                <div class="control-group">
-                    <label>Gradient Strategy:</label>
-                    <div class="strategy-display" id="gradientStrategy">AllReduce</div>
                 </div>
             </div>
         </div>
