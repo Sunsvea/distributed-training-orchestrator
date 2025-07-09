@@ -390,13 +390,26 @@ class DashboardServer:
                         for alert in recent_alerts
                     ]
                     
+                    # Add cluster and scenario data if available
+                    cluster_data = None
+                    scenario_data = None
+                    
+                    if hasattr(self, 'demo_orchestrator') and self.demo_orchestrator:
+                        cluster_data = {
+                            "coordinator": {"status": "active"},
+                            "workers": self.demo_orchestrator.demo_state.get("active_workers", [])
+                        }
+                        scenario_data = self.demo_orchestrator.demo_state.get("current_scenario", "baseline_training")
+                    
                     # Broadcast update
                     update_message = {
                         "type": "metrics_update",
                         "timestamp": time.time(),
                         "health_score": health_score,
                         "metrics": serializable_metrics,
-                        "alerts": alerts_data
+                        "alerts": alerts_data,
+                        "cluster": cluster_data,
+                        "scenario": scenario_data
                     }
                     
                     await self.broadcast_to_websockets(update_message)
