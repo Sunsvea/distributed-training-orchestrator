@@ -311,8 +311,17 @@ class SimpleDemoOrchestrator:
         """Simulate realistic system metrics"""
         while self.running:
             # Network metrics
-            worker_count = len([w for w in self.demo_state["active_workers"] if w["status"] == "active"])
-            self.performance_monitor.register_network_connections(worker_count)
+            active_workers = [w for w in self.demo_state["active_workers"] if w["status"] == "active"]
+            worker_connections = [
+                {
+                    "node_id": worker["id"],
+                    "status": worker["status"],
+                    "connection_time": worker["connected_at"],
+                    "last_seen": time.time()
+                }
+                for worker in active_workers
+            ]
+            self.performance_monitor.register_network_connections(worker_connections)
             
             await asyncio.sleep(2)
     
