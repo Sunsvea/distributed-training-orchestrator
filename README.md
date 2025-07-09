@@ -31,9 +31,23 @@ python worker/main.py --node-id worker-1
 python worker/main.py --node-id worker-2
 python worker/main.py --node-id worker-3
 
-# Start dashboard
-cd dashboard && npm start
+# Start real-time dashboard
+python demo_dashboard.py
 ```
+
+## Dashboard Features
+
+The integrated web dashboard provides:
+
+- **Real-time Monitoring**: Live system metrics, training progress, and cluster health
+- **Interactive Charts**: Performance trends and resource utilization visualization
+- **Smart Alerts**: Configurable alerting rules with multiple severity levels
+- **Performance Insights**: Automated recommendations and optimization suggestions
+- **WebSocket Updates**: Real-time data streaming for live dashboard updates
+- **REST API**: Programmatic access to all metrics and cluster information
+- **Export Capabilities**: Download metrics in JSON/CSV formats for analysis
+
+Access the dashboard at `http://localhost:8080` after starting with `python demo_dashboard.py`.
 
 ## Demo Scenarios
 
