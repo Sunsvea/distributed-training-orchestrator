@@ -945,6 +945,21 @@ class DashboardServer:
             </div>
         </div>
         
+        <!-- Cluster Visualization -->
+        <div class="card">
+            <h3>Cluster Topology</h3>
+            <div class="cluster-viz-container">
+                <div class="cluster-node coordinator" id="coordinatorNode">
+                    <div class="node-icon">🎯</div>
+                    <div class="node-label">Coordinator</div>
+                    <div class="node-status">Active</div>
+                </div>
+                <div class="workers-container" id="workersContainer">
+                    <!-- Worker nodes will be added dynamically -->
+                </div>
+            </div>
+        </div>
+        
         <!-- Demo Controls -->
         <div class="card">
             <h3>Demo Controls</h3>
@@ -964,21 +979,6 @@ class DashboardServer:
                 <div class="control-group">
                     <label>Gradient Strategy:</label>
                     <div class="strategy-display" id="gradientStrategy">AllReduce</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Cluster Visualization -->
-        <div class="card full-width">
-            <h3>Cluster Topology</h3>
-            <div class="cluster-viz-container">
-                <div class="cluster-node coordinator" id="coordinatorNode">
-                    <div class="node-icon">🎯</div>
-                    <div class="node-label">Coordinator</div>
-                    <div class="node-status">Active</div>
-                </div>
-                <div class="workers-container" id="workersContainer">
-                    <!-- Worker nodes will be added dynamically -->
                 </div>
             </div>
         </div>
