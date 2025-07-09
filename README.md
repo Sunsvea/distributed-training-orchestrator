@@ -24,7 +24,10 @@ A fault-tolerant distributed machine learning training system with consensus-bas
 # Install dependencies
 pip install -r requirements.txt
 
-# Start the complete interactive demo
+# Start the simple interactive demo (recommended)
+python demo_simple.py
+
+# OR start the full distributed training demo
 python demo_orchestrator.py
 
 # Access dashboard at http://localhost:8080
