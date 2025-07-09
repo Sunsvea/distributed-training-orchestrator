@@ -876,6 +876,85 @@ class DashboardServer:
         .demo-btn:active {
             transform: translateY(1px);
         }
+        
+        /* Console Styles */
+        .console-container {
+            height: 300px;
+            background: #1a1a1a;
+            border-radius: 4px;
+            padding: 1rem;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .console-output {
+            height: 100%;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            color: #e0e0e0;
+        }
+        
+        .console-line {
+            margin-bottom: 2px;
+            word-wrap: break-word;
+        }
+        
+        .console-timestamp {
+            color: #888;
+            font-weight: bold;
+        }
+        
+        .console-level {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 0.75rem;
+            margin: 0 8px;
+        }
+        
+        .console-level.info {
+            background: #2196f3;
+            color: white;
+        }
+        
+        .console-level.warning {
+            background: #ff9800;
+            color: white;
+        }
+        
+        .console-level.error {
+            background: #f44336;
+            color: white;
+        }
+        
+        .console-level.success {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .console-message {
+            color: #e0e0e0;
+        }
+        
+        .console-output::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .console-output::-webkit-scrollbar-track {
+            background: #333;
+            border-radius: 4px;
+        }
+        
+        .console-output::-webkit-scrollbar-thumb {
+            background: #666;
+            border-radius: 4px;
+        }
+        
+        .console-output::-webkit-scrollbar-thumb:hover {
+            background: #888;
+        }
     </style>
 </head>
 <body>
@@ -949,6 +1028,25 @@ class DashboardServer:
             </div>
         </div>
         
+        <!-- Training Progress Charts -->
+        <div class="card">
+            <h3>Training Progress</h3>
+            <div class="training-progress">
+                <div class="progress-item">
+                    <label>Loss Curve:</label>
+                    <div class="mini-chart">
+                        <canvas id="lossChart"></canvas>
+                    </div>
+                </div>
+                <div class="progress-item">
+                    <label>Accuracy Curve:</label>
+                    <div class="mini-chart">
+                        <canvas id="accuracyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Cluster Visualization with Demo Controls -->
         <div class="card cluster-with-controls">
             <h3>Cluster Topology</h3>
@@ -987,28 +1085,15 @@ class DashboardServer:
             </div>
         </div>
         
-        <!-- Performance Charts -->
+        <!-- System Console -->
         <div class="card full-width">
-            <h3>Performance Trends</h3>
-            <div class="chart-container">
-                <canvas id="performanceChart"></canvas>
-            </div>
-        </div>
-        
-        <!-- Training Progress Charts -->
-        <div class="card">
-            <h3>Training Progress</h3>
-            <div class="training-progress">
-                <div class="progress-item">
-                    <label>Loss Curve:</label>
-                    <div class="mini-chart">
-                        <canvas id="lossChart"></canvas>
-                    </div>
-                </div>
-                <div class="progress-item">
-                    <label>Accuracy Curve:</label>
-                    <div class="mini-chart">
-                        <canvas id="accuracyChart"></canvas>
+            <h3>System Console</h3>
+            <div class="console-container">
+                <div class="console-output" id="consoleOutput">
+                    <div class="console-line">
+                        <span class="console-timestamp">[00:00:00]</span>
+                        <span class="console-level info">INFO</span>
+                        <span class="console-message">System initialized - waiting for events...</span>
                     </div>
                 </div>
             </div>
@@ -1038,54 +1123,51 @@ class DashboardServer:
     <script>
         // Dashboard JavaScript
         let ws = null;
-        let chart = null;
-        let chartData = {
-            labels: [],
-            datasets: [
-                {
-                    label: 'CPU %',
-                    data: [],
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    tension: 0.1
-                },
-                {
-                    label: 'Memory %',
-                    data: [],
-                    borderColor: 'rgb(255, 99, 132)',
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                    tension: 0.1
-                }
-            ]
-        };
+        let consoleLines = [];
+        let maxConsoleLines = 50;
+        let previousMetrics = {};
         
         // Initialize dashboard
         function initDashboard() {
-            initChart();
+            initMiniCharts();
             connectWebSocket();
             loadInitialData();
+            addConsoleMessage('System starting up...', 'info');
         }
         
-        // Initialize performance chart
-        function initChart() {
-            const ctx = document.getElementById('performanceChart').getContext('2d');
-            chart = new Chart(ctx, {
-                type: 'line',
-                data: chartData,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 100
-                        }
-                    },
-                    animation: {
-                        duration: 0 // Disable animations for real-time updates
-                    }
-                }
-            });
+        // Console functionality
+        function addConsoleMessage(message, level = 'info') {
+            const now = new Date();
+            const timestamp = now.toLocaleTimeString();
+            
+            const consoleLine = {
+                timestamp: `[${timestamp}]`,
+                level: level,
+                message: message
+            };
+            
+            consoleLines.push(consoleLine);
+            
+            // Keep only the last maxConsoleLines
+            if (consoleLines.length > maxConsoleLines) {
+                consoleLines = consoleLines.slice(-maxConsoleLines);
+            }
+            
+            updateConsoleDisplay();
+        }
+        
+        function updateConsoleDisplay() {
+            const consoleOutput = document.getElementById('consoleOutput');
+            consoleOutput.innerHTML = consoleLines.map(line => 
+                `<div class="console-line">
+                    <span class="console-timestamp">${line.timestamp}</span>
+                    <span class="console-level ${line.level}">${line.level.toUpperCase()}</span>
+                    <span class="console-message">${line.message}</span>
+                </div>`
+            ).join('');
+            
+            // Auto-scroll to bottom
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
         }
         
         // Connect to WebSocket
@@ -1098,6 +1180,7 @@ class DashboardServer:
             ws.onopen = function() {
                 console.log('WebSocket connected');
                 updateConnectionStatus(true);
+                addConsoleMessage('WebSocket connected - receiving real-time updates', 'success');
                 
                 // Subscribe to updates
                 ws.send(JSON.stringify({type: 'subscribe'}));
@@ -1111,6 +1194,7 @@ class DashboardServer:
             ws.onclose = function() {
                 console.log('WebSocket disconnected');
                 updateConnectionStatus(false);
+                addConsoleMessage('WebSocket disconnected - attempting to reconnect', 'warning');
                 
                 // Attempt to reconnect after 5 seconds
                 setTimeout(connectWebSocket, 5000);
@@ -1119,6 +1203,7 @@ class DashboardServer:
             ws.onerror = function(error) {
                 console.error('WebSocket error:', error);
                 updateConnectionStatus(false);
+                addConsoleMessage('WebSocket connection error', 'error');
             };
         }
         
@@ -1128,8 +1213,89 @@ class DashboardServer:
                 updateMetrics(data.metrics);
                 updateHealthScore(data.health_score);
                 updateAlerts(data.alerts);
-                updateChart(data.metrics);
+                updateConsoleFromMetrics(data.metrics, data.cluster, data.scenario);
+                updateMiniCharts(data.metrics);
+                
+                // Update cluster visualization if available
+                if (data.cluster) {
+                    updateClusterViz(data.cluster);
+                }
+                
+                // Update scenario if available
+                if (data.scenario) {
+                    updateScenario(data.scenario);
+                }
             }
+        }
+        
+        // Update console based on metrics and cluster changes
+        function updateConsoleFromMetrics(metrics, cluster, scenario) {
+            // Track worker status changes
+            if (cluster && cluster.workers) {
+                cluster.workers.forEach(worker => {
+                    const prevWorker = previousMetrics.cluster?.workers?.find(w => w.id === worker.id);
+                    
+                    if (!prevWorker) {
+                        addConsoleMessage(`Worker ${worker.id} joined the cluster`, 'success');
+                    } else if (prevWorker.status !== worker.status) {
+                        if (worker.status === 'failed') {
+                            addConsoleMessage(`Worker ${worker.id} failed - initiating recovery`, 'error');
+                        } else if (worker.status === 'active' && prevWorker.status === 'failed') {
+                            addConsoleMessage(`Worker ${worker.id} recovered successfully`, 'success');
+                        }
+                    }
+                });
+                
+                // Check for removed workers
+                if (previousMetrics.cluster?.workers) {
+                    previousMetrics.cluster.workers.forEach(prevWorker => {
+                        const currentWorker = cluster.workers.find(w => w.id === prevWorker.id);
+                        if (!currentWorker) {
+                            addConsoleMessage(`Worker ${prevWorker.id} removed from cluster`, 'warning');
+                        }
+                    });
+                }
+            }
+            
+            // Track training progress
+            if (metrics.training) {
+                const prevTraining = previousMetrics.training;
+                if (prevTraining) {
+                    const lossDiff = prevTraining.loss - metrics.training.loss;
+                    if (lossDiff > 0.01) {
+                        addConsoleMessage(`Training loss improved: ${metrics.training.loss.toFixed(4)} (↓${lossDiff.toFixed(4)})`, 'info');
+                    }
+                    
+                    const accDiff = metrics.training.accuracy - prevTraining.accuracy;
+                    if (accDiff > 0.02) {
+                        addConsoleMessage(`Training accuracy improved: ${(metrics.training.accuracy * 100).toFixed(2)}% (↑${(accDiff * 100).toFixed(2)}%)`, 'info');
+                    }
+                }
+            }
+            
+            // Track scenario changes
+            if (scenario && scenario !== previousMetrics.scenario) {
+                addConsoleMessage(`Scenario changed to: ${scenario.replace('_', ' ')}`, 'info');
+            }
+            
+            // Track alerts
+            if (metrics.alerts && metrics.alerts.active_alerts) {
+                const prevAlerts = previousMetrics.alerts?.active_alerts || [];
+                metrics.alerts.active_alerts.forEach(alert => {
+                    const prevAlert = prevAlerts.find(a => a.name === alert.name);
+                    if (!prevAlert && !alert.resolved) {
+                        addConsoleMessage(`Alert triggered: ${alert.message}`, 'warning');
+                    }
+                });
+            }
+            
+            // Store current metrics for next comparison
+            previousMetrics = {
+                cluster: cluster,
+                training: metrics.training,
+                scenario: scenario,
+                alerts: metrics.alerts
+            };
         }
         
         // Update connection status
@@ -1218,26 +1384,6 @@ class DashboardServer:
             alertsList.innerHTML = alertsHtml;
         }
         
-        // Update performance chart
-        function updateChart(metrics) {
-            if (!metrics.system) return;
-            
-            const now = new Date().toLocaleTimeString();
-            
-            // Add new data point
-            chartData.labels.push(now);
-            chartData.datasets[0].data.push(metrics.system.cpu_percent || 0);
-            chartData.datasets[1].data.push(metrics.system.memory_percent || 0);
-            
-            // Keep only last 20 data points
-            if (chartData.labels.length > 20) {
-                chartData.labels.shift();
-                chartData.datasets[0].data.shift();
-                chartData.datasets[1].data.shift();
-            }
-            
-            chart.update('none'); // Update without animation
-        }
         
         // Load initial data
         async function loadInitialData() {
@@ -1299,7 +1445,7 @@ class DashboardServer:
         
         // Demo control functions
         function addWorker() {
-            console.log('Adding worker...');
+            addConsoleMessage('Requesting to add new worker...', 'info');
             // Send request to add worker
             fetch('/api/demo/add-worker', { method: 'POST' })
                 .then(response => response.json())
@@ -1309,12 +1455,13 @@ class DashboardServer:
                 })
                 .catch(error => {
                     console.error('Error adding worker:', error);
+                    addConsoleMessage('Failed to add worker', 'error');
                     updateStatusMessage('Error adding worker', 'error');
                 });
         }
         
         function removeWorker() {
-            console.log('Removing worker...');
+            addConsoleMessage('Requesting to remove worker...', 'info');
             // Send request to remove worker
             fetch('/api/demo/remove-worker', { method: 'POST' })
                 .then(response => response.json())
@@ -1324,12 +1471,13 @@ class DashboardServer:
                 })
                 .catch(error => {
                     console.error('Error removing worker:', error);
+                    addConsoleMessage('Failed to remove worker', 'error');
                     updateStatusMessage('Error removing worker', 'error');
                 });
         }
         
         function injectFailure() {
-            console.log('Injecting failure...');
+            addConsoleMessage('Injecting failure into random worker...', 'warning');
             // Send request to inject failure
             fetch('/api/demo/inject-failure', { method: 'POST' })
                 .then(response => response.json())
@@ -1339,12 +1487,13 @@ class DashboardServer:
                 })
                 .catch(error => {
                     console.error('Error injecting failure:', error);
+                    addConsoleMessage('Failed to inject failure', 'error');
                     updateStatusMessage('Error injecting failure', 'error');
                 });
         }
         
         function switchStrategy() {
-            console.log('Switching strategy...');
+            addConsoleMessage('Switching gradient synchronization strategy...', 'info');
             // Send request to switch gradient strategy
             fetch('/api/demo/switch-strategy', { method: 'POST' })
                 .then(response => response.json())
@@ -1355,12 +1504,13 @@ class DashboardServer:
                 })
                 .catch(error => {
                     console.error('Error switching strategy:', error);
+                    addConsoleMessage('Failed to switch strategy', 'error');
                     updateStatusMessage('Error switching strategy', 'error');
                 });
         }
         
         function resetTraining() {
-            console.log('Resetting training...');
+            addConsoleMessage('Resetting training progress to initial state...', 'info');
             // Send request to reset training progress
             fetch('/api/demo/reset-training', { method: 'POST' })
                 .then(response => response.json())
@@ -1382,6 +1532,7 @@ class DashboardServer:
                 })
                 .catch(error => {
                     console.error('Error resetting training:', error);
+                    addConsoleMessage('Failed to reset training', 'error');
                     updateStatusMessage('Error resetting training', 'error');
                 });
         }
@@ -1434,7 +1585,7 @@ class DashboardServer:
         function updateScenario(scenario) {
             const scenarioDisplay = document.getElementById('currentScenario');
             if (scenarioDisplay) {
-                scenarioDisplay.textContent = scenario.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                scenarioDisplay.textContent = scenario.replace('_', ' ').replace(/\\b\\w/g, l => l.toUpperCase());
             }
         }
         
@@ -1461,7 +1612,14 @@ class DashboardServer:
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: { beginAtZero: true }
+                        x: { 
+                            title: { display: true, text: 'Epoch' },
+                            beginAtZero: true
+                        },
+                        y: { 
+                            title: { display: true, text: 'Loss' },
+                            beginAtZero: true 
+                        }
                     },
                     plugins: {
                         legend: { display: false }
@@ -1488,7 +1646,15 @@ class DashboardServer:
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: { beginAtZero: true, max: 100 }
+                        x: { 
+                            title: { display: true, text: 'Epoch' },
+                            beginAtZero: true
+                        },
+                        y: { 
+                            title: { display: true, text: 'Accuracy (%)' },
+                            beginAtZero: true, 
+                            max: 100 
+                        }
                     },
                     plugins: {
                         legend: { display: false }
@@ -1501,63 +1667,48 @@ class DashboardServer:
         function updateMiniCharts(metrics) {
             if (!metrics.training) return;
             
-            const now = new Date().toLocaleTimeString();
+            // Use epoch as x-axis instead of time
+            const epoch = metrics.training.epoch || 0;
+            const loss = metrics.training.loss || 0;
+            const accuracy = (metrics.training.accuracy * 100) || 0;
             
-            // Update loss chart
+            // Update loss chart - accumulate entire training history
             if (lossChart) {
-                lossChart.data.labels.push(now);
-                lossChart.data.datasets[0].data.push(metrics.training.loss || 0);
-                
-                if (lossChart.data.labels.length > 10) {
-                    lossChart.data.labels.shift();
-                    lossChart.data.datasets[0].data.shift();
+                // Only add new data if it's a new epoch or if it's significantly different
+                const lastEpoch = lossChart.data.labels[lossChart.data.labels.length - 1];
+                if (epoch !== lastEpoch || Math.abs(loss - (lossChart.data.datasets[0].data[lossChart.data.datasets[0].data.length - 1] || 0)) > 0.001) {
+                    lossChart.data.labels.push(epoch);
+                    lossChart.data.datasets[0].data.push(loss);
+                    
+                    // Keep maximum of 200 data points for performance
+                    if (lossChart.data.labels.length > 200) {
+                        lossChart.data.labels.shift();
+                        lossChart.data.datasets[0].data.shift();
+                    }
+                    
+                    lossChart.update('none');
                 }
-                
-                lossChart.update('none');
             }
             
-            // Update accuracy chart
+            // Update accuracy chart - accumulate entire training history
             if (accuracyChart) {
-                accuracyChart.data.labels.push(now);
-                accuracyChart.data.datasets[0].data.push((metrics.training.accuracy * 100) || 0);
-                
-                if (accuracyChart.data.labels.length > 10) {
-                    accuracyChart.data.labels.shift();
-                    accuracyChart.data.datasets[0].data.shift();
-                }
-                
-                accuracyChart.update('none');
-            }
-        }
-        
-        // Override the initDashboard function to include new features
-        function initDashboard() {
-            initChart();
-            initMiniCharts();
-            connectWebSocket();
-            loadInitialData();
-        }
-        
-        // Override handleWebSocketMessage to handle new demo data
-        function handleWebSocketMessage(data) {
-            if (data.type === 'metrics_update') {
-                updateMetrics(data.metrics);
-                updateHealthScore(data.health_score);
-                updateAlerts(data.alerts);
-                updateChart(data.metrics);
-                updateMiniCharts(data.metrics);
-                
-                // Update cluster visualization if available
-                if (data.cluster) {
-                    updateClusterViz(data.cluster);
-                }
-                
-                // Update scenario if available
-                if (data.scenario) {
-                    updateScenario(data.scenario);
+                // Only add new data if it's a new epoch or if it's significantly different
+                const lastEpoch = accuracyChart.data.labels[accuracyChart.data.labels.length - 1];
+                if (epoch !== lastEpoch || Math.abs(accuracy - (accuracyChart.data.datasets[0].data[accuracyChart.data.datasets[0].data.length - 1] || 0)) > 0.5) {
+                    accuracyChart.data.labels.push(epoch);
+                    accuracyChart.data.datasets[0].data.push(accuracy);
+                    
+                    // Keep maximum of 200 data points for performance
+                    if (accuracyChart.data.labels.length > 200) {
+                        accuracyChart.data.labels.shift();
+                        accuracyChart.data.datasets[0].data.shift();
+                    }
+                    
+                    accuracyChart.update('none');
                 }
             }
         }
+        
         
         // Initialize dashboard when page loads
         document.addEventListener('DOMContentLoaded', initDashboard);
