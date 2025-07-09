@@ -200,7 +200,7 @@ class DashboardServer:
             try:
                 # Signal to demo orchestrator to add worker
                 if hasattr(self, 'demo_orchestrator') and self.demo_orchestrator:
-                    worker_id = f"worker-{len(self.demo_orchestrator.workers) + 1}"
+                    worker_id = f"worker-{len(self.demo_orchestrator.demo_state['active_workers']) + 1}"
                     await self.demo_orchestrator._start_worker(worker_id)
                     return {"success": True, "worker_id": worker_id, "message": "Worker added successfully"}
                 else:
@@ -215,8 +215,8 @@ class DashboardServer:
             try:
                 # Signal to demo orchestrator to remove worker
                 if hasattr(self, 'demo_orchestrator') and self.demo_orchestrator:
-                    if len(self.demo_orchestrator.workers) > 1:
-                        worker_id = list(self.demo_orchestrator.workers.keys())[-1]
+                    if len(self.demo_orchestrator.demo_state['active_workers']) > 1:
+                        worker_id = self.demo_orchestrator.demo_state['active_workers'][-1]['id']
                         await self.demo_orchestrator._stop_worker(worker_id)
                         return {"success": True, "worker_id": worker_id, "message": "Worker removed successfully"}
                     else:
@@ -233,8 +233,8 @@ class DashboardServer:
             try:
                 # Signal to demo orchestrator to inject failure
                 if hasattr(self, 'demo_orchestrator') and self.demo_orchestrator:
-                    if len(self.demo_orchestrator.workers) > 1:
-                        worker_id = list(self.demo_orchestrator.workers.keys())[0]
+                    if len(self.demo_orchestrator.demo_state['active_workers']) > 1:
+                        worker_id = self.demo_orchestrator.demo_state['active_workers'][0]['id']
                         await self.demo_orchestrator._simulate_worker_failure(worker_id)
                         return {"success": True, "worker_id": worker_id, "message": "Failure injected - observe recovery"}
                     else:
@@ -340,11 +340,60 @@ class DashboardServer:
                     "total_bandwidth": value.total_bandwidth,
                     "packet_loss_rate": value.packet_loss_rate
                 }
+            elif key == "alerts" and value is not None:
+                # Handle alerts with proper serialization
+                if isinstance(value, dict):
+                    json_metrics[key] = {
+                        "active_count": value.get("active_count", 0),
+                        "active_alerts": self._serialize_alerts(value.get("active_alerts", []))
+                    }
+                else:
+                    json_metrics[key] = value
             else:
-                # For other keys (custom_metrics, alerts, etc.)
+                # For other keys (custom_metrics, etc.)
                 json_metrics[key] = value
         
         return json_metrics
+    
+    def _serialize_alerts(self, alerts: List[Any]) -> List[Dict[str, Any]]:
+        """Serialize Alert objects to JSON-compatible format"""
+        serialized_alerts = []
+        
+        for alert in alerts:
+            try:
+                # Handle Alert dataclass objects
+                if hasattr(alert, 'name') and hasattr(alert, 'severity'):
+                    alert_dict = {
+                        "name": str(alert.name),
+                        "severity": str(alert.severity.value) if hasattr(alert.severity, 'value') else str(alert.severity),
+                        "message": str(alert.message),
+                        "timestamp": float(alert.timestamp),
+                        "resolved": bool(alert.resolved)
+                    }
+                    
+                    # Include optional fields if they exist
+                    if hasattr(alert, 'resolved_timestamp') and alert.resolved_timestamp is not None:
+                        alert_dict["resolved_timestamp"] = float(alert.resolved_timestamp)
+                    if hasattr(alert, 'metadata') and alert.metadata:
+                        alert_dict["metadata"] = alert.metadata
+                    
+                    serialized_alerts.append(alert_dict)
+                else:
+                    # Handle already serialized alerts or dictionaries
+                    serialized_alerts.append(alert)
+                    
+            except Exception as e:
+                logger.warning(f"Error serializing alert: {e}")
+                # Add a fallback alert representation
+                serialized_alerts.append({
+                    "name": "serialization_error",
+                    "severity": "warning",
+                    "message": f"Error serializing alert: {str(e)}",
+                    "timestamp": time.time(),
+                    "resolved": False
+                })
+        
+        return serialized_alerts
     
     async def broadcast_to_websockets(self, message: dict):
         """Broadcast message to all connected WebSocket clients"""
@@ -374,21 +423,15 @@ class DashboardServer:
                     current_metrics = self.performance_monitor.get_current_performance_summary()
                     health_score = self.performance_monitor.get_health_score()
                     
+                    # Get recent alerts and add to metrics before conversion
+                    recent_alerts = self.performance_monitor.alert_manager.get_alert_history(limit=5)
+                    current_metrics["alerts"] = {
+                        "active_count": len([a for a in recent_alerts if not a.resolved]),
+                        "active_alerts": recent_alerts
+                    }
+                    
                     # Convert metrics to JSON-serializable format
                     serializable_metrics = self._convert_metrics_to_json(current_metrics)
-                    
-                    # Get recent alerts
-                    recent_alerts = self.performance_monitor.alert_manager.get_alert_history(limit=5)
-                    alerts_data = [
-                        {
-                            "name": alert.name,
-                            "severity": alert.severity.value,
-                            "message": alert.message,
-                            "timestamp": alert.timestamp,
-                            "resolved": alert.resolved
-                        }
-                        for alert in recent_alerts
-                    ]
                     
                     # Add cluster and scenario data if available
                     cluster_data = None
@@ -407,7 +450,6 @@ class DashboardServer:
                         "timestamp": time.time(),
                         "health_score": health_score,
                         "metrics": serializable_metrics,
-                        "alerts": alerts_data,
                         "cluster": cluster_data,
                         "scenario": scenario_data
                     }
