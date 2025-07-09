@@ -93,7 +93,8 @@ class DashboardServer:
         async def get_current_metrics():
             """Get current performance metrics"""
             try:
-                return self.performance_monitor.get_current_performance_summary()
+                current_metrics = self.performance_monitor.get_current_performance_summary()
+                return self._convert_metrics_to_json(current_metrics)
             except Exception as e:
                 logger.error(f"Error getting current metrics: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
@@ -230,6 +231,50 @@ class DashboardServer:
             self.active_connections.remove(websocket)
         logger.info(f"WebSocket disconnected. Active connections: {len(self.active_connections)}")
     
+    def _convert_metrics_to_json(self, metrics: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert metrics with dataclass objects to JSON-serializable format"""
+        json_metrics = {}
+        
+        for key, value in metrics.items():
+            if key == "system" and value is not None:
+                json_metrics[key] = {
+                    "timestamp": value.timestamp,
+                    "cpu_percent": value.cpu_percent,
+                    "memory_percent": value.memory_percent,
+                    "memory_used_gb": value.memory_used_gb,
+                    "memory_total_gb": value.memory_total_gb,
+                    "disk_used_gb": value.disk_used_gb,
+                    "disk_total_gb": value.disk_total_gb,
+                    "gpu_metrics": value.gpu_metrics,
+                    "network_io_bytes_sent": value.network_io_bytes_sent,
+                    "network_io_bytes_recv": value.network_io_bytes_recv
+                }
+            elif key == "training" and value is not None:
+                json_metrics[key] = {
+                    "timestamp": value.timestamp,
+                    "loss": value.loss,
+                    "accuracy": value.accuracy,
+                    "learning_rate": value.learning_rate,
+                    "batch_size": value.batch_size,
+                    "epoch": value.epoch,
+                    "iteration": value.iteration,
+                    "throughput": value.throughput,
+                    "gradient_norm": value.gradient_norm
+                }
+            elif key == "network" and value is not None:
+                json_metrics[key] = {
+                    "timestamp": value.timestamp,
+                    "worker_connections": value.worker_connections,
+                    "average_latency": value.average_latency,
+                    "total_bandwidth": value.total_bandwidth,
+                    "packet_loss_rate": value.packet_loss_rate
+                }
+            else:
+                # For other keys (custom_metrics, alerts, etc.)
+                json_metrics[key] = value
+        
+        return json_metrics
+    
     async def broadcast_to_websockets(self, message: dict):
         """Broadcast message to all connected WebSocket clients"""
         if not self.active_connections:
@@ -258,6 +303,9 @@ class DashboardServer:
                     current_metrics = self.performance_monitor.get_current_performance_summary()
                     health_score = self.performance_monitor.get_health_score()
                     
+                    # Convert metrics to JSON-serializable format
+                    serializable_metrics = self._convert_metrics_to_json(current_metrics)
+                    
                     # Get recent alerts
                     recent_alerts = self.performance_monitor.alert_manager.get_alert_history(limit=5)
                     alerts_data = [
@@ -276,7 +324,7 @@ class DashboardServer:
                         "type": "metrics_update",
                         "timestamp": time.time(),
                         "health_score": health_score,
-                        "metrics": current_metrics,
+                        "metrics": serializable_metrics,
                         "alerts": alerts_data
                     }
                     
