@@ -288,6 +288,37 @@ class DashboardServer:
                 logger.error(f"Error switching demo strategy: {e}")
                 raise HTTPException(status_code=500, detail=str(e))
         
+        @self.app.post("/api/demo/reset-training")
+        async def reset_demo_training():
+            """Reset training progress to fresh state"""
+            try:
+                # Signal to demo orchestrator to reset training
+                if hasattr(self, 'demo_orchestrator') and self.demo_orchestrator:
+                    # Reset training progress to initial state
+                    self.demo_orchestrator.demo_state["training_progress"] = {
+                        "epoch": 0,
+                        "loss": 1.0,
+                        "accuracy": 0.0,
+                        "throughput": 200.0
+                    }
+                    
+                    # Clear fault injections
+                    self.demo_orchestrator.demo_state["fault_injections"] = []
+                    
+                    # Reset cluster health
+                    self.demo_orchestrator.demo_state["cluster_health"] = 100.0
+                    
+                    # Reset all workers to active state
+                    for worker in self.demo_orchestrator.demo_state["active_workers"]:
+                        worker["status"] = "active"
+                    
+                    return {"success": True, "message": "Training progress reset to fresh state"}
+                else:
+                    return {"success": False, "message": "Demo orchestrator not available"}
+            except Exception as e:
+                logger.error(f"Error resetting demo training: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+        
         @self.app.websocket("/ws")
         async def websocket_endpoint(websocket: WebSocket):
             """WebSocket endpoint for real-time updates"""
@@ -817,10 +848,17 @@ class DashboardServer:
         }
         
         /* Training Progress */
+        .training-controls-container {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-start;
+        }
+        
         .training-progress {
             display: flex;
             flex-direction: column;
             gap: 1rem;
+            flex: 1;
         }
         
         .progress-item {
@@ -839,6 +877,14 @@ class DashboardServer:
             background: #f8f9fa;
             border-radius: 4px;
             padding: 0.5rem;
+        }
+        
+        /* Demo Controls - adjusted for side-by-side layout */
+        .demo-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            flex: 0 0 280px; /* Fixed width for controls */
         }
     </style>
 </head>
@@ -928,28 +974,6 @@ class DashboardServer:
             </div>
         </div>
         
-        <!-- Demo Controls -->
-        <div class="card">
-            <h3>Demo Controls</h3>
-            <div class="demo-controls">
-                <div class="control-group">
-                    <label>Current Scenario:</label>
-                    <div class="scenario-display" id="currentScenario">Baseline Training</div>
-                </div>
-                <div class="control-group">
-                    <label>Interactive Actions:</label>
-                    <button class="demo-btn" onclick="addWorker()">➕ Add Worker</button>
-                    <button class="demo-btn" onclick="removeWorker()">➖ Remove Worker</button>
-                    <button class="demo-btn" onclick="injectFailure()">💥 Inject Failure</button>
-                    <button class="demo-btn" onclick="switchStrategy()">🔄 Switch Strategy</button>
-                </div>
-                <div class="control-group">
-                    <label>Gradient Strategy:</label>
-                    <div class="strategy-display" id="gradientStrategy">AllReduce</div>
-                </div>
-            </div>
-        </div>
-        
         <!-- Performance Charts -->
         <div class="card full-width">
             <h3>Performance Trends</h3>
@@ -958,20 +982,40 @@ class DashboardServer:
             </div>
         </div>
         
-        <!-- Training Progress -->
+        <!-- Training Progress with Demo Controls -->
         <div class="card">
-            <h3>Training Progress</h3>
-            <div class="training-progress">
-                <div class="progress-item">
-                    <label>Loss Curve:</label>
-                    <div class="mini-chart">
-                        <canvas id="lossChart"></canvas>
+            <h3>Training Progress & Demo Controls</h3>
+            <div class="training-controls-container">
+                <div class="training-progress">
+                    <div class="progress-item">
+                        <label>Loss Curve:</label>
+                        <div class="mini-chart">
+                            <canvas id="lossChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="progress-item">
+                        <label>Accuracy Curve:</label>
+                        <div class="mini-chart">
+                            <canvas id="accuracyChart"></canvas>
+                        </div>
                     </div>
                 </div>
-                <div class="progress-item">
-                    <label>Accuracy Curve:</label>
-                    <div class="mini-chart">
-                        <canvas id="accuracyChart"></canvas>
+                <div class="demo-controls">
+                    <div class="control-group">
+                        <label>Current Scenario:</label>
+                        <div class="scenario-display" id="currentScenario">Baseline Training</div>
+                    </div>
+                    <div class="control-group">
+                        <label>Interactive Actions:</label>
+                        <button class="demo-btn" onclick="addWorker()">➕ Add Worker</button>
+                        <button class="demo-btn" onclick="removeWorker()">➖ Remove Worker</button>
+                        <button class="demo-btn" onclick="injectFailure()">💥 Inject Failure</button>
+                        <button class="demo-btn" onclick="switchStrategy()">🔄 Switch Strategy</button>
+                        <button class="demo-btn" onclick="resetTraining()">🔄 Reset Training</button>
+                    </div>
+                    <div class="control-group">
+                        <label>Gradient Strategy:</label>
+                        <div class="strategy-display" id="gradientStrategy">AllReduce</div>
                     </div>
                 </div>
             </div>
@@ -1319,6 +1363,33 @@ class DashboardServer:
                 .catch(error => {
                     console.error('Error switching strategy:', error);
                     updateStatusMessage('Error switching strategy', 'error');
+                });
+        }
+        
+        function resetTraining() {
+            console.log('Resetting training...');
+            // Send request to reset training progress
+            fetch('/api/demo/reset-training', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Training reset:', data);
+                    updateStatusMessage('Training progress reset to fresh state');
+                    
+                    // Clear the charts
+                    if (lossChart) {
+                        lossChart.data.labels = [];
+                        lossChart.data.datasets[0].data = [];
+                        lossChart.update();
+                    }
+                    if (accuracyChart) {
+                        accuracyChart.data.labels = [];
+                        accuracyChart.data.datasets[0].data = [];
+                        accuracyChart.update();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error resetting training:', error);
+                    updateStatusMessage('Error resetting training', 'error');
                 });
         }
         
