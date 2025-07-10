@@ -152,7 +152,7 @@ class TestDashboardServer:
         assert "text/html" in response.headers["content-type"]
         assert "Distributed Training Orchestrator" in response.text
         assert "WebSocket" in response.text
-        assert "Performance Trends" in response.text
+        assert "Performance Insights" in response.text
     
     def test_add_alert_rule_endpoint(self, dashboard_server):
         """Test adding alert rule via API"""

@@ -42,7 +42,7 @@ This interactive demo showcases a **production-ready distributed machine learnin
 - **💥 Inject Failure**: Simulate worker failure to demonstrate recovery
 - **🔄 Switch Strategy**: Change gradient synchronization method
 
-### 6. **Performance Trends Chart**
+### 6. **Performance Insights Chart**
 - Real-time CPU and memory usage over time
 - Live updates every 2 seconds
 
