@@ -2,6 +2,8 @@
 
 A fault-tolerant distributed machine learning training system with consensus-based coordination and real-time monitoring.
 
+Visit the playground here: [Live Demo](https://distributed-training-orchestrator.vercel.app/)
+
 ## Features
 
 - **Consensus Algorithm**: Raft-based coordinator election and cluster management
@@ -81,5 +83,3 @@ The demo automatically cycles through different scenarios to showcase the system
 - **➖ Remove Worker**: Scale down the cluster  
 - **💥 Inject Failure**: Simulate worker failure to demonstrate recovery
 - **🔄 Switch Strategy**: Change gradient synchronization method
-
-See [DEMO_GUIDE.md](DEMO_GUIDE.md) for detailed demonstration instructions.
