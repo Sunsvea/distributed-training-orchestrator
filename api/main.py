@@ -111,7 +111,7 @@ def simulate_system_metrics():
 @app.get("/", response_class=HTMLResponse)
 async def dashboard():
     """Serve the main dashboard page"""
-    return await get_dashboard_html()
+    return get_dashboard_html()
 
 @app.get("/api/status")
 async def get_system_status():
@@ -246,7 +246,7 @@ async def reset_demo_training():
         logger.error(f"Error resetting training: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-async def get_dashboard_html() -> str:
+def get_dashboard_html() -> str:
     """Generate the dashboard HTML page with polling instead of WebSockets"""
     return '''
 <!DOCTYPE html>
@@ -1315,4 +1315,4 @@ async def get_dashboard_html() -> str:
     '''
 
 # For Vercel, the app needs to be accessible as a module
-handler = app
+# The app object is already defined above and should be automatically detected by Vercel
