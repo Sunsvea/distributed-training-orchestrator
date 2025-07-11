@@ -108,6 +108,29 @@ def simulate_system_metrics():
         "timestamp": time.time()
     }
 
+def simulate_worker_recovery():
+    """Simulate automatic worker recovery after failures"""
+    current_time = time.time()
+    
+    # Check for failed workers that should recover
+    for worker in demo_state.active_workers:
+        if worker["status"] == "failed":
+            # Find when this worker failed
+            failure_time = None
+            for fault in demo_state.fault_injections:
+                if fault["target"] == worker["id"] and fault["type"] == "worker_failure":
+                    failure_time = fault["timestamp"]
+                    break
+            
+            # If worker has been failed for more than 3-10 seconds, recover it
+            if failure_time and (current_time - failure_time) > random.uniform(3, 10):
+                worker["status"] = "active"
+                worker["connected_at"] = current_time
+                
+                # Simulate gradual training recovery
+                current_loss = demo_state.training_progress["loss"]
+                demo_state.training_progress["loss"] = max(0.05, current_loss - random.uniform(0.02, 0.05))
+
 @app.get("/", response_class=HTMLResponse)
 async def dashboard():
     """Serve the main dashboard page"""
@@ -134,6 +157,9 @@ async def get_current_metrics():
     """Get current performance metrics"""
     # Simulate training progress
     simulate_training_progress()
+    
+    # Simulate worker recovery
+    simulate_worker_recovery()
     
     # Get system metrics
     system_metrics = simulate_system_metrics()
