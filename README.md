@@ -1,6 +1,6 @@
-# Distributed Training Orchestrator
+# Distributed Training Orchestrator Simulator
 
-A fault-tolerant distributed machine learning training system with consensus-based coordination and real-time monitoring.
+A simulated fault-tolerant distributed machine learning training system with consensus-based coordination and real-time monitoring.
 
 Visit the playground here: [Live Demo](https://distributed-training-orchestrator.vercel.app/)
 
